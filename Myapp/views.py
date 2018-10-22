@@ -8,13 +8,9 @@ from watson_developer_cloud import NaturalLanguageUnderstandingV1
 from django.views.decorators.csrf import csrf_exempt
 from watson_developer_cloud.natural_language_understanding_v1 \
   import Features, EntitiesOptions, KeywordsOptions
-
+source = ''
 Content = {
     'keywords': {
-        'text': [],
-        'score': []
-    },
-    'concepts': {
         'text': [],
         'score': []
     },
@@ -27,11 +23,16 @@ Content = {
         'score': []
     },
 }
-
+semantic_roles = []
+def CompareSource(comparesource):
+    source = Data.objects.get(pk=1).Source
+def sync(comparesource):
+    return comparesource.split(' ')
 def reset(Content):
-    for h in ['keywords', 'concepts', 'entities', 'categories']:
+    for h in ['keywords', 'entities', 'categories']:
         Content[h]['text'].clear()
         Content[h]['score'].clear()
+    semantic_roles.clear()
 
 def Know(text):
     natural_language_understanding = NaturalLanguageUnderstandingV1(
@@ -42,14 +43,14 @@ def Know(text):
     response = natural_language_understanding.analyze(
         text= text,
         features=Features(
-        concepts=EntitiesOptions(
+        entities=EntitiesOptions(
         emotion=False,
 
         ),
         categories=EntitiesOptions(
         emotion=False,
         ),
-    entities=EntitiesOptions(
+        semantic_roles=EntitiesOptions(
       emotion=False,
       sentiment=False,
       ),
@@ -59,33 +60,59 @@ def Know(text):
       )))
 
     re = response
-    for h in ['keywords','concepts','entities','categories']:
+
+    semantic_roles.append(json.dumps(re['semantic_roles'][0]['sentence']))
+    for h in ['keywords','entities','categories']:
         for i in re[h]:
             try:
-                if (float(json.dumps(i['relevance'])) > 0.8):
-                    Content[h]['text'].append(i['text'])
-                    Content[h]['score'].append(i['relevance'])
-                else:
-                    pass
+                try:
+                    if (float(json.dumps(i['relevance'])) > 0.3):
+                        Content[h]['text'].append(i['text'])
+                        Content[h]['score'].append(i['relevance'])
+                    else:
+                        pass
+                except:
+                    if (float(json.dumps(i['relevance'])) > 0.3):
+                        Content[h]['text'].append(i['label'])
+                        Content[h]['score'].append(i['relevance'])
+                    else:
+                        pass
 
             except:
-                if (float(json.dumps(i['score'])) > 0.8):
-                    Content[h]['text'].append(i['text'])
-                    Content[h]['score'].append(i['score'])
-                else:
-                    pass
+                try:
+                    if (float(json.dumps(i['score'])) > 0.3):
+                        Content[h]['text'].append(i['text'])
+                        Content[h]['score'].append(i['score'])
+                    else:
+                        pass
+                except:
+                    if (float(json.dumps(i['score'])) > 0.3):
+                        Content[h]['text'].append(i['label'])
+                        Content[h]['score'].append(i['score'])
+                    else:
+                        pass
+
+    count = Data.objects.count()
+    count = count + 1
+    data = Data(seq=count, keywords=Content['keywords']['text'][0], entities=Content['entities']['text'],
+                categories=Content['categories']['text'],
+                desc=semantic_roles[0].__str__().split('"'), source='', etc='')
+    data.save()
+def source(te):
+    re = []
+    return te.split(";")[0]
 
 def index(request):
     return render(request, 'tem.html')
-
+def compare(request):
+    data = request.GET['text']
+    return render(request, 'comparecode.html',{"source" : sync(data)})
 def pro(request):
 
     reset(Content)
     cont = request.POST.get('a')
-    Know(cont)
 
-    data = Data(keywords=Content['keywords']['text'], concepts=Content['concepts']['text'],
-                entities=Content['entities']['text'], categories=Content['categories']['text'], source='')
-    data.save()
-    return HttpResponse(Content.values())
+
+
+    return HttpResponse(source(cont))
 
