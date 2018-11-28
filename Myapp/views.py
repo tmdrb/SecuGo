@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-from .models  import Data
+from .models  import Data,CompareSource
 from django.views.decorators.csrf import csrf_exempt,csrf_protect
 import json
 from django.http import HttpResponseRedirect
@@ -24,10 +24,16 @@ Content = {
     },
 }
 semantic_roles = []
-def CompareSource(comparesource):
-    source = Data.objects.get(pk=1).Source
+
 def sync(comparesource):
-    return comparesource.split(' ')
+    findData = Data.objects.filter(lang='java')
+
+    ccc = {'findData':findData}
+
+    a =''
+
+    return a
+
 def reset(Content):
     for h in ['keywords', 'entities', 'categories']:
         Content[h]['text'].clear()
